@@ -1,0 +1,34 @@
+[
+	{
+		"label":	"A string representing the Neo4j Label",
+		"description": "A string describing the node type. Optional",
+		"requiredProperties":
+		[
+			{
+				"name":	"A string reprenting the name of the Node's property",
+				"validator":	"The name of the validator you want to use. The validator must ultimately pass a string, number, or simple array of a string or number to neo4j.",
+				"description":	"A description of the property. Optional."
+			}
+		],
+		"validRelations":
+		[
+			{
+				"type": "A string representing the type of outbound relation",
+				"validTargets":
+				[
+					{
+						"label": "Neo4j Label of Valid Target",
+						"requiredProperties":
+						[
+							{
+								"name": "Property name",
+								"validator": "Property validator - same as for node properties",
+								"description": "Optional string to describe what this relation type is for"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]

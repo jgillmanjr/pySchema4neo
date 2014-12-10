@@ -1,0 +1,70 @@
+[
+	{
+		"label": "Person",
+		"description": "A node representing a person",
+		"requiredProperties":
+		[
+			{
+				"name": "name",
+				"validator": "string"
+			},
+			{
+				"name": "age",
+				"validator": "integer",
+				"description": "The persons age"
+			}
+		],
+		"validRelations":
+		[
+			{
+				"type": "knows",
+				"validTargets":
+				[
+					{
+						"label": "Person",
+						"requiredProperties":
+						[
+							{
+								"name": "length",
+								"validator": "integer",
+								"description": "How many years?"
+							}
+						]
+					}
+				]
+			},
+			{
+				"type": "codes_in",
+				"validTargets":
+				[
+					{
+						"label": "ProgLanguage"
+					}
+				]
+			},
+			{
+				"type": "dislikes",
+				"validTargets":
+				[
+					{
+						"label": "Person"
+					},
+					{
+						"label": "ProgLanguage"
+					}
+				]
+			}
+		]
+	},
+	{
+		"label": "ProgLanguage",
+		"description": "A programming language",
+		"requiredProperties":
+		[
+			{
+				"name": "name",
+				"validator": "string"
+			}
+		]
+	}
+]
