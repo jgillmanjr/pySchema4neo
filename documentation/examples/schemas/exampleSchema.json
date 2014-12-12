@@ -1,70 +1,58 @@
-[
+{
+	"Person":
 	{
-		"label": "Person",
 		"description": "A node representing a person",
 		"requiredProperties":
-		[
+		{
+			"name":
 			{
-				"name": "name",
 				"validator": "string"
 			},
+			"age":
 			{
-				"name": "age",
 				"validator": "integer",
 				"description": "The persons age"
 			}
-		],
+		},
 		"validRelations":
-		[
+		{
+			"knows":
 			{
-				"type": "knows",
-				"validTargets":
-				[
+				"Person":
+				{
+					"length":
 					{
-						"label": "Person",
-						"requiredProperties":
-						[
-							{
-								"name": "length",
-								"validator": "integer",
-								"description": "How many years?"
-							}
-						]
+						"validator": "integer",
+						"description": "How many years?"
 					}
-				]
+				}
 			},
+			"codes_in":
 			{
-				"type": "codes_in",
-				"validTargets":
-				[
-					{
-						"label": "ProgLanguage"
-					}
-				]
+				"ProgLanguage":
+				{
+				}
 			},
+			"dislikes":
 			{
-				"type": "dislikes",
-				"validTargets":
-				[
-					{
-						"label": "Person"
-					},
-					{
-						"label": "ProgLanguage"
-					}
-				]
+				"Person":
+				{
+				},
+				"ProgLanguage":
+				{
+				}
 			}
-		]
+		}
 	},
+	"ProgLanguage":
 	{
-		"label": "ProgLanguage",
 		"description": "A programming language",
 		"requiredProperties":
-		[
+		{
+			"name":
 			{
-				"name": "name",
 				"validator": "string"
 			}
-		]
+		}
 	}
-]
+}

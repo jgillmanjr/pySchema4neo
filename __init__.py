@@ -16,67 +16,61 @@ def validateSchema(schema):
 	schema is the JSON decoded version
 	"""
 
-	if type(schema) is not list or len(schema) == 0:
-		raise Exception('Empty Schema or is not a list')
+	if type(schema) is not dict or len(schema) == 0:
+		raise Exception('Empty Schema or is not a dict')
 
-	for nodeIdx, nodeDef in enumerate(schema):
-		location = 'Node Index ' + str(nodeIdx)
+	for nodeLabel, nodeDef in schema.iteritems():
+		location = 'Node Index ' + str(nodeLabel)
+		if not isinstance(nodeLabel, basestring):
+			raise Exception('Invalid node label in node definition at ' + location)
 		if type(nodeDef) is not dict:
 			raise Exception(location + ' is not a dict')
-		if 'label' not in nodeDef or not isinstance(nodeDef['label'], basestring):
-			raise Exception('No label or invalid label value in node definition at ' + location)
 		if 'description' in nodeDef and not isinstance(nodeDef['description'], basestring):
 			raise Exception('description is not a string at ' + location)
 
 		if 'requiredProperties' in nodeDef:
-			if type(nodeDef['requiredProperties']) is not list:
-				raise Exception('requiredProperties for ' + location + 'is not a list')
+			if type(nodeDef['requiredProperties']) is not dict:
+				raise Exception('requiredProperties for ' + location + 'is not a dict')
 			if len(nodeDef['requiredProperties']) > 0: # Dive into requiredProperties
-				for propIdx, propDef in enumerate(nodeDef['requiredProperties']):
-					location = 'Node Index ' + str(nodeIdx) + ' Property Index: ' + str(propIdx)
+				for propLabel, propDef in nodeDef['requiredProperties'].iteritems():
+					location = 'Node Index ' + str(nodeLabel) + ' Property Index: ' + str(propLabel)
+					if not isinstance(propLabel, basestring):
+						raise Exception('Invalid property label in node definition at ' + location)
 					if type(propDef) is not dict:
 						raise Exception(location + ' is not a dict')
-					if 'name' not in propDef or not isinstance(propDef['name'], basestring):
-						raise Exception('No name or invalid name value for ' + location)
 					if 'validator' not in propDef or not isinstance(propDef['validator'], basestring):
 						raise Exception('No validator or invalid validator value for ' + location)
 					if 'description' in propDef and not isinstance(propDef['description'], basestring):
 						raise Exception('description is not a string at ' + location)
 
 		if 'validRelations' in nodeDef:
-			if type(nodeDef['validRelations']) is not list:
-				raise Exception('validRelations for node definition at index ' + location + 'is not a list')
+			if type(nodeDef['validRelations']) is not dict:
+				raise Exception('validRelations for node definition at index ' + location + 'is not a dict')
 			if len(nodeDef['validRelations']) > 0: # Dive into validRelations
-				for relIdx, relDef in enumerate(nodeDef['validRelations']):
-					location = 'Node Index ' + str(nodeIdx) + ' Relation Index: ' + str(relIdx)
+				for relType, relDef in nodeDef['validRelations'].iteritems():
+					location = 'Node Index ' + str(nodeLabel) + ' Relation Index: ' + str(relType)
+					if not isinstance(relType, basestring):
+						raise Exception('Invalid relation type value in relation definition at ' + location)
 					if type(relDef) is not dict:
 						raise Exception(location + ' is not a dict')
-					if 'type' not in relDef or not isinstance(relDef['type'], basestring):
-						raise Exception('No type or invalid type value for ' + location)
-					if 'validTargets' in relDef:
-						if type(relDef['validTargets']) is not list or len(relDef['validTargets']) == 0:
-							raise Exception('validTargets is not a list or is empty for ' + location)
-						else: # Dive into validTargets
-							for tgtIdx, tgtDef in enumerate(relDef['validTargets']):
-								location = 'Node Index ' + str(nodeIdx) + ' Relation Index: ' + str(relIdx) + ' Target Index: ' + str(tgtIdx)
-								if type(tgtDef) is not dict:
-									raise Exception(location + ' is not a dict')
-								if 'label' not in tgtDef or not isinstance(tgtDef['label'], basestring):
-									raise Exception('No label or invalid label value for ' + location)
-								if 'requiredProperties' in tgtDef:
-									if type(tgtDef['requiredProperties']) is not list:
-										raise Exception('requiredProperties for ' + location + 'is not a list')
-									if len(tgtDef['requiredProperties']) > 0: # Dive into requiredProperties
-										for propIdx, propDef in enumerate(tgtDef['requiredProperties']):
-											location = 'Node Index ' + str(nodeIdx) + ' Relation Index: ' + str(relIdx) + ' Target Index: ' + str(tgtIdx) + ' Property Index: ' + str(propIdx)
-											if type(propDef) is not dict:
-												raise Exception(location + ' is not a dict')
-											if 'name' not in propDef or not isinstance(propDef['name'], basestring):
-												raise Exception('No name or invalid name value for ' + location)
-											if 'validator' not in propDef or not isinstance(propDef['validator'], basestring):
-												raise Exception('No validator or invalid validator value for ' + location)
-											if 'description' in propDef and not isinstance(propDef['description'], basestring):
-												raise Exception('description is not a string at ' + location)
+					if len(relDef) > 0: # Dive into validTargets
+						for tgtLabel, tgtDef in relDef.iteritems():
+							location = 'Node Index ' + str(nodeLabel) + ' Relation Index: ' + str(relType) + ' Target Index: ' + str(tgtLabel)
+							if not isinstance(tgtLabel, basestring):
+								raise Exception('Invalid target label in relation definition at ' + location)
+							if type(tgtDef) is not dict:
+								raise Exception(location + ' is not a dict')
+							if len (tgtDef) > 0: # Dive into required properties for the target
+								for propLabel, propDef in tgtDef.iteritems():
+									location = 'Node Index ' + str(nodeLabel) + ' Relation Index: ' + str(relType) + ' Target Index: ' + str(tgtLabel) + ' Property Index: ' + str(propLabel)
+									if not isinstance(propLabel, basestring):
+										raise Exception('Invalid property label at ' + location)
+									if type(propDef) is not dict:
+										raise Exception(location + ' is not a dict')
+									if 'validator' not in propDef or not isinstance(propDef['validator'], basestring):
+										raise Exception('No validator or invalid validator value for ' + location)
+									if 'description' in propDef and not isinstance(propDef['description'], basestring):
+										raise Exception('description is not a string at ' + location)
 
 
 class schema:
@@ -102,9 +96,10 @@ class schema:
 		else:
 			self.graph = Graph(uri)
 
+		# Schema setup #
 		schemaFile = open(schemaPath)
-		self.schema = json.loads(schemaFile.read())
-		validateSchema(self.schema)
+		rawSchema = json.loads(schemaFile.read())
+		validateSchema(rawSchema) # Make sure things are on the up and up
 		schemaFile.close()
 
 		#validatorFile = open(validatorPath)

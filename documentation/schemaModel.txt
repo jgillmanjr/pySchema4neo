@@ -1,0 +1,29 @@
+*** This is not a valid schema file. It's merely here to document the JSON structure for a schema file.***
+{
+	"label": # A string representing the label of a node to be defined
+	{
+		"description": "A string describing the node type. Optional",
+		"requiredProperties": # This is optional. It can also exist and have a length of 0
+		{
+			"name": # A string representing the name of a property
+			{
+				"validator":	"A string representing the name of the validator you want to use. The validator must ultimately pass a string, number, or simple array of a string or number to neo4j. Required key.",
+				"description":	"A description of the property. Must be a string if it exsits. Optional."
+			},
+		},
+		"validRelations": # This is optional. It can also exist and have a length of 0. If this key doesn't exist or references an empty dict, any outbound relation is valid.
+		{
+			"type": # A string representing the type an allowed outbound relation. If this key is empty, any node can be a target of this relation
+			{
+				"label": # A string representing a label of a valid target node for the parent relation type. Resulting dict can be empty if there are no required properties for the relation to a particular node.
+				{
+					"name": # A string representing the name of a required property for the relation
+					{
+						"validator": "Property validator - same as for node properties",
+						"description": "Optional string to describe what this relation type is for"
+					}
+				},
+			},
+		}
+	},
+}
