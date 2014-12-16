@@ -6,7 +6,7 @@ A layer to provide for dataconsistency utilizing a schema
 Author: Jason Gillman Jr.
 """
 
-from py2neo import Graph, Node, Relationship
+import py2neo
 import json
 
 def validateSchema(schema):
@@ -73,28 +73,23 @@ def validateSchema(schema):
 										raise Exception('description is not a string at ' + location)
 
 
-class schema:
+class Graph(py2neo.Graph):
 	"""
-	A schema object is what will be used to enforce requirements for creating and updating nodes and relations in Neo4j.
+	An overloaded py2neo.Graph class which contains code to load the schema and validator objects.
 
 	Multiple schema objects can be instantiated.
 	"""
 
-	def __init__(self, schemaPath, validatorPath, uri = None):
+	def __init__(self, schemaPath, validatorPath, *args, **kwargs):
 		"""
-		Insantiate a schema object.
+		Insantiate a Graph object.
 
 		schemaPath is the path to the JSON file containing your schema
 
 		validatorPath is the path to the script that contains your validators
 
-		uri will be fed into py2neo.Graph() to indicate the URI for the graph database
+		*args and **kwargs get passed to the py2neo.Graph constructor.
 		"""
-
-		if uri is None:
-			self.graph = Graph()
-		else:
-			self.graph = Graph(uri)
 
 		# Schema setup #
 		schemaFile = open(schemaPath)
@@ -102,6 +97,15 @@ class schema:
 		validateSchema(rawSchema) # Make sure things are on the up and up
 		schemaFile.close()
 
+		print "BEFORE THE PY2NEO\n" #DBUG
+		#py2neo.Graph.__init__(*args, **kwargs)
+
 		#validatorFile = open(validatorPath)
 
-		
+class Node(py2neo.Node):
+	def __init__(self, *args, **kwargs):
+		py2neo.Node.__init__(self, *args, **kwargs)
+
+class Relationship(py2neo.Relationship):
+	def __init__(self, *args, **kwargs):
+		py2neo.Relationship.__init__(self, *args, **kwargs)
