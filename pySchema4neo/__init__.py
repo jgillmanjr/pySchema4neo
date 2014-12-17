@@ -79,16 +79,16 @@ class Graph(py2neo.Graph):
 
 	Multiple schema objects can be instantiated.
 	"""
+	def __new__(cls, schemaPath, validatorPath, uri=None):
+		return super(py2neo.Graph, cls).__new__(cls, uri)
 
-	def __init__(self, schemaPath, validatorPath, *args, **kwargs):
+	def __init__(self, schemaPath, validatorPath, uri=None):
 		"""
 		Insantiate a Graph object.
 
 		schemaPath is the path to the JSON file containing your schema
 
 		validatorPath is the path to the script that contains your validators
-
-		*args and **kwargs get passed to the py2neo.Graph constructor.
 		"""
 
 		# Schema setup #
@@ -96,9 +96,6 @@ class Graph(py2neo.Graph):
 		rawSchema = json.loads(schemaFile.read())
 		validateSchema(rawSchema) # Make sure things are on the up and up
 		schemaFile.close()
-
-		print "BEFORE THE PY2NEO\n" #DBUG
-		#py2neo.Graph.__init__(*args, **kwargs)
 
 		#validatorFile = open(validatorPath)
 
