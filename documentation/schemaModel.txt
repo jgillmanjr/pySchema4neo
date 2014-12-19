@@ -3,19 +3,19 @@
 	"label": # A string representing the label of a node to be defined
 	{
 		"description": "A string describing the node type. Optional",
-		"requiredProperties": # This is optional. It can also exist and have a length of 0
+		"requiredProperties": # This is optional. It can also exist and have a length of 0. Be carful though about not having required properties, as this will null out any property requirements that other labels assigned to the node might normaly impose. This also includes eliminating all validation checks.
 		{
 			"name": # A string representing the name of a property
 			{
-				"validator":	"A string representing the name of the validator you want to use. The validator must ultimately pass a string, number, or simple array of a string or number to neo4j. Required key.",
+				"validator":	"A string representing the name of the validator you want to use. The validator must ultimately pass something that can be cast to one of the neo4j types (http://neo4j.com/docs/stable/graphdb-neo4j-properties.html). Required key.",
 				"description":	"A description of the property. Must be a string if it exsits. Optional."
 			},
 		},
-		"validRelations": # This is optional. It can also exist and have a length of 0. If this key doesn't exist or references an empty dict, any outbound relation is valid.
+		"validRelations": # This is optional. It can also exist and have a length of 0. If this key doesn't exist or references an empty dict, any outbound relation is valid. Be careful though about not having valid relations though, as this will null out any validRelation limitations specified for other labels that may be assigned to the node
 		{
-			"type": # A string representing the type an allowed outbound relation. If this key is empty, any node can be a target of this relation
+			"type": # A string representing the type an allowed outbound relation. If this key is empty, any node can be a target of this relation. Be warned about any target being valid as implications apply like pointed out above.
 			{
-				"label": # A string representing a label of a valid target node for the parent relation type. Resulting dict can be empty if there are no required properties for the relation to a particular node.
+				"label": # A string representing a label of a valid target node for the parent relation type. Resulting dict can be empty if there are no required properties for the relation to a particular node. Again, insert override warning here.
 				{
 					"name": # A string representing the name of a required property for the relation
 					{
