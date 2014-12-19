@@ -107,8 +107,16 @@ class Schema():
 		# Schema setup and validation
 		schemaFile = open(schemaPath)
 		self.schema = json.loads(schemaFile.read())
-		validateSchema(self.schema) # Make sure things are on the up and up
 		schemaFile.close()
+		validateSchema(self.schema) # Make sure things are on the up and up
+
+		## Find any labels that don't require any specific properties, as well as labels that handle any outbound relation
+		self.anyPropLabels = set()
+		self.anyRelLabels = set()
+		for label, definition in self.schema.iteritems():
+			if 'requiredProperties' not in definition or len(definition['requiredProperties']) == 0: self.anyPropLabels.add(label)
+			if 'validRelations' not in definition or len(definition['validRelations']) == 0: self.anyRelLabels.add(label)
+
 
 		self.Graph = graphObj
 
@@ -123,40 +131,66 @@ class Schema():
 		As for the return value, a dict will be returned in the format of:
 			{
 				'success': True || False,
-				'errMsg': 'If false above, the error message indicating why the fail' || None
+				'err': 'If false above, the error message indicating why the fail' || None
 			}
 		"""
-		breaker = False # Things will check for this. If it pops true, node fails and won't create (or update)
-
 		nodeLabels = Node.labels
 		nodeProperties = Node.properties
-		for nodeLabel in nodeLabels:
-			if nodeLabel not in self.schema:
-				err = 'Oh lawdy:' + nodeLabel + 'is not a valid label!'
-				breaker = True
-				break
-			else:
-				if ('requiredProperties' in self.schema[nodeLabel]) and (len(self.schema[nodeLabel]['requiredProperties']) > 0): # Check for existance of required properties for a label. If so, do needful
+
+		if not self.anyPropLabels.intersection(nodeLabels): # No point in checking properties if the node has a 'free for all' label assignment
+			for nodeLabel in nodeLabels:
+				if nodeLabel not in self.schema:
+					return {'success': False, 'err': nodeLabel + ' is not a valid label'}
+				else:
 					requiredProps = self.schema[nodeLabel]['requiredProperties'].keys()
 					for reqProp in requiredProps:
 						if reqProp not in nodeProperties.keys():
-							err = 'The required property ' + reqProp + ' is not defined in the node.'
-							breaker = True
-							break
+							return {'success': False, 'err': 'The required property ' + reqProp + ' is not defined in the node.'}
 						else:
 							pass	# This is where the validator for the required property would be called to make sure the property value was legit. But for now... just go
-									# Should also figure out how I want to handle different labels with same required property but different validators...
-					if breaker: break
-			########### I SHOULD PUT SOMETHING HERE TO CHECK AND MAKE SURE UPDATES STILL JIVE WITH RELATIONS ALREADY SET ###############
+									# Should also figure out how I want to handle different labels with same required property but different validators... actually, handle this at schema validation - don't allow it
+				########### I NEED PUT SOMETHING HERE TO CHECK AND MAKE SURE UPDATES STILL JIVE WITH RELATIONS ALREADY SET ###############
 
-		if not breaker: # Check if we should create/update or not
-			if Node.bound:
-				Node.push() # Update
-			else:
-				self.Graph.create(Node) # Create
-			return {'success': True, 'err': None}
+		if Node.bound:
+			Node.push() # Update
 		else:
-			return {'success': False, 'err': err}
+			self.Graph.create(Node) # Create
+		return {'success': True, 'err': None}
 
 	def checkRel(self, Rel):
-		pass
+		"""
+		Checks the validity of the relation.
+
+		If it passes, the relation is created or updated.
+
+		As for the return value, a dict will be returned in the format of:
+			{
+				'success': True || False,
+				'err': 'If false above, the error message indicating why the fail' || None
+			}
+		"""
+		# Apparently py2neo can have Reltionship objects with more than two nodes? Check to make sure it's only two...
+		if Rel.order != 2:
+			return {'success': False, 'err': 'There are more than two nodes in the Relationship object.'}
+
+		# Make sure the nodes themselves are legit
+		if not self.checkNode(Rel.start_node)['success']:
+			return {'success': False, 'err': 'The starting node failed validation.'}
+		if not self.checkNode(Rel.end_node)['success']:
+			return {'success': False, 'err': 'The ending node failed validation.'}
+
+		# Now make sure the relation itself is legit
+		
+		## Check the relation type for validity
+		startNode		= Rel.start_node
+		startLabels		= startNode.labels
+		endNode			= Rel.end_node
+		endLabels		= endNode.labels
+		relProperties	= Rel.properties
+		labelRelCovered = False # This will indicate whether the relation type is considered legit from the perspective of the node's label(s)
+		
+		if self.anyPropLabels.intersection(startLabels): labelRelCovered = True # Might as well just take care of this now if appropriate...
+		for startLabel in startLabels:
+			if Rel.type in self.schema[startLabel]['validRelations']:
+				labelRelCovered = True
+
