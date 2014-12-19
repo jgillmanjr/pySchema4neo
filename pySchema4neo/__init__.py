@@ -73,36 +73,90 @@ def validateSchema(schema):
 										raise Exception('description is not a string at ' + location)
 
 
-class Graph(py2neo.Graph):
+class Schema():
 	"""
-	An overloaded py2neo.Graph class which contains code to load the schema and validator objects.
-
-	Multiple schema objects can be instantiated.
+	The Schema class
 	"""
-	def __new__(cls, schemaPath, validatorPath, uri=None):
-		return super(py2neo.Graph, cls).__new__(cls, uri)
-
-	def __init__(self, schemaPath, validatorPath, uri=None):
+	def __call__(self, *args, **kwargs):
 		"""
-		Insantiate a Graph object.
+		If the things pass validation, they get created or updated.
+
+		Also return a list of the results in the order of the arguments as they were passed in
+		"""
+		if args:
+			argResults = []
+			for arg in args:
+				argClass = arg.__class__.__name__
+				if argClass == 'Node': argResults.append(self.checkNode(arg))
+				if argClass == 'Relationship': argResults.append(self.checkRel(arg))
+				if argClass not in ['Node', 'Relationship']: print 'Umm, not sure what to do with an instance of', argClass
+
+		return argResults
+
+	def __init__(self, schemaPath, validatorPath, graphObj):
+		"""
+		Insantiate a Schema object.
 
 		schemaPath is the path to the JSON file containing your schema
 
 		validatorPath is the path to the script that contains your validators
+
+		graphObj is the py2neo Graph object to use
 		"""
 
-		# Schema setup #
+		# Schema setup and validation
 		schemaFile = open(schemaPath)
-		rawSchema = json.loads(schemaFile.read())
-		validateSchema(rawSchema) # Make sure things are on the up and up
+		self.schema = json.loads(schemaFile.read())
+		validateSchema(self.schema) # Make sure things are on the up and up
 		schemaFile.close()
 
+		self.Graph = graphObj
+
 		#validatorFile = open(validatorPath)
+	
+	def checkNode(self, Node):
+		"""
+		Checks the validity of the node.
 
-class Node(py2neo.Node):
-	def __init__(self, *args, **kwargs):
-		py2neo.Node.__init__(self, *args, **kwargs)
+		If it passes, the node is created or updated.
 
-class Relationship(py2neo.Relationship):
-	def __init__(self, *args, **kwargs):
-		py2neo.Relationship.__init__(self, *args, **kwargs)
+		As for the return value, a dict will be returned in the format of:
+			{
+				'success': True || False,
+				'errMsg': 'If false above, the error message indicating why the fail' || None
+			}
+		"""
+		breaker = False # Things will check for this. If it pops true, node fails and won't create (or update)
+
+		nodeLabels = Node.labels
+		nodeProperties = Node.properties
+		for nodeLabel in nodeLabels:
+			if nodeLabel not in self.schema:
+				err = 'Oh lawdy:' + nodeLabel + 'is not a valid label!'
+				breaker = True
+				break
+			else:
+				if ('requiredProperties' in self.schema[nodeLabel]) and (len(self.schema[nodeLabel]['requiredProperties']) > 0): # Check for existance of required properties for a label. If so, do needful
+					requiredProps = self.schema[nodeLabel]['requiredProperties'].keys()
+					for reqProp in requiredProps:
+						if reqProp not in nodeProperties.keys():
+							err = 'The required property ' + reqProp + ' is not defined in the node.'
+							breaker = True
+							break
+						else:
+							pass	# This is where the validator for the required property would be called to make sure the property value was legit. But for now... just go
+									# Should also figure out how I want to handle different labels with same required property but different validators...
+					if breaker: break
+			########### I SHOULD PUT SOMETHING HERE TO CHECK AND MAKE SURE UPDATES STILL JIVE WITH RELATIONS ALREADY SET ###############
+
+		if not breaker: # Check if we should create/update or not
+			if Node.bound:
+				Node.push() # Update
+			else:
+				self.Graph.create(Node) # Create
+			return {'success': True, 'err': None}
+		else:
+			return {'success': False, 'err': err}
+
+	def checkRel(self, Rel):
+		pass
