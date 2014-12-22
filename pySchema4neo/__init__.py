@@ -122,10 +122,12 @@ class Schema():
 
 		#validatorFile = open(validatorPath)
 	
-	def checkNode(self, Node):
+	def checkNode(self, Node, fromRelChk = False):
 		"""
 		Checks the validity of the node.
 
+		This method is focused on checking the properties of the node.
+		If fromRelChk isn't passed in as True, which will happen if this method gets fired by checkRel(), the node is instantiated on neo4j, and there are in or outbound relations, the relations will be checked as well.
 		If it passes, the node is created or updated.
 
 		As for the return value, a dict will be returned in the format of:
@@ -149,7 +151,15 @@ class Schema():
 						else:
 							pass	# This is where the validator for the required property would be called to make sure the property value was legit. But for now... just go
 									# Should also figure out how I want to handle different labels with same required property but different validators... actually, handle this at schema validation - don't allow it
-				########### I NEED PUT SOMETHING HERE TO CHECK AND MAKE SURE UPDATES STILL JIVE WITH RELATIONS ALREADY SET ###############
+		
+		# Check for instantiated outgoing relations
+		outRels = []
+		if Node.bound: # It will complain if not bound
+			relGen = Node.match_outgoing()
+			for rel in relGen:
+				outRels.append(rel)
+		if not fromRelChk and len(outRels) > 0: # Don't run the reference check if the node check was a result from a reference check or if there are no outbound relations
+			pass
 
 		if Node.bound:
 			Node.push() # Update
@@ -157,11 +167,13 @@ class Schema():
 			self.Graph.create(Node) # Create
 		return {'success': True, 'err': None}
 
-	def checkRel(self, Rel):
+	def checkRel(self, Rel, fromNodeChk):
 		"""
 		Checks the validity of the relation.
 
 		If it passes, the relation is created or updated.
+
+		fromNodeChk will get passed as true if the relation check is done as a result of a node check
 
 		As for the return value, a dict will be returned in the format of:
 			{
@@ -173,24 +185,24 @@ class Schema():
 		if Rel.order != 2:
 			return {'success': False, 'err': 'There are more than two nodes in the Relationship object.'}
 
-		# Make sure the nodes themselves are legit
-		if not self.checkNode(Rel.start_node)['success']:
+		# Make sure the nodes themselves are legit (without doing relation checks - because that would be recursive and bad, yo)
+		if not self.checkNode(Rel.start_node, True)['success']:
 			return {'success': False, 'err': 'The starting node failed validation.'}
-		if not self.checkNode(Rel.end_node)['success']:
+		if not self.checkNode(Rel.end_node, True)['success']:
 			return {'success': False, 'err': 'The ending node failed validation.'}
 
 		# Now make sure the relation itself is legit
 		
 		## Check the relation type for validity
-		startNode		= Rel.start_node
-		startLabels		= startNode.labels
-		endNode			= Rel.end_node
-		endLabels		= endNode.labels
-		relProperties	= Rel.properties
-		labelRelCovered = False # This will indicate whether the relation type is considered legit from the perspective of the node's label(s)
-		
-		if self.anyPropLabels.intersection(startLabels): labelRelCovered = True # Might as well just take care of this now if appropriate...
-		for startLabel in startLabels:
-			if Rel.type in self.schema[startLabel]['validRelations']:
-				labelRelCovered = True
+#		startNode		= Rel.start_node
+#		startLabels		= startNode.labels
+#		endNode			= Rel.end_node
+#		endLabels		= endNode.labels
+#		relProperties	= Rel.properties
+#		labelRelCovered = False # This will indicate whether the relation type is considered legit from the perspective of the node's label(s)
+#		
+#		if self.anyPropLabels.intersection(startLabels): labelRelCovered = True # Might as well just take care of this now if appropriate...
+#		for startLabel in startLabels:
+#			if Rel.type in self.schema[startLabel]['validRelations']:
+#				labelRelCovered = True
 
