@@ -152,13 +152,13 @@ class Schema():
 							pass	# This is where the validator for the required property would be called to make sure the property value was legit. But for now... just go
 									# Should also figure out how I want to handle different labels with same required property but different validators... actually, handle this at schema validation - don't allow it
 		
-		# Check for instantiated outgoing relations
-		outRels = []
+		# Check for instantiated relations
+		ioRels = []
 		if Node.bound: # It will complain if not bound
-			relGen = Node.match_outgoing()
+			relGen = Node.match()
 			for rel in relGen:
-				outRels.append(rel)
-		if not fromRelChk and len(outRels) > 0: # Don't run the reference check if the node check was a result from a reference check or if there are no outbound relations
+				ioRels.append(rel)
+		if not fromRelChk and len(ioRels) > 0: # Don't run the reference check if the node check was a result from a reference check or if there are no relations
 			pass
 
 		if Node.bound:
