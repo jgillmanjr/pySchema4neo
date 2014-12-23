@@ -209,6 +209,18 @@ class Schema():
 		# Now make sure the relation itself is legit
 		
 		## Check the relation type for validity
+		startNode		= Rel.start_node
+		startLabels		= startNode.labels
+		endNode			= Rel.end_node
+		endLabels		= endNode.labels
+		relProperties	= Rel.properties
+		allowedRel = False # This will indicate whether the relation type is considered legit from the perspective of the node's label(s)
+		freeForAll = False # Set if there's a 'free for all' label assigned to the starting node
+		
+		## 'Free for all' check
+		if self.anyRelLabels.intersection(startLabels):
+			allowedRel = True # Not really needed, but my OCD compels me..
+			freeForAll = True
 #		startNode		= Rel.start_node
 #		startLabels		= startNode.labels
 #		endNode			= Rel.end_node
