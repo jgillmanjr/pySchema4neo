@@ -89,7 +89,7 @@ class Schema():
 				argClass = arg.__class__.__name__
 				if argClass == 'Node': argResults.append(self.checkNode(arg))
 				if argClass == 'Relationship': argResults.append(self.checkRel(arg))
-				if argClass not in ['Node', 'Relationship']: print 'Umm, not sure what to do with an instance of', argClass
+				if argClass not in ['Node', 'Relationship']: argResults.append{'success': False, 'err': 'Umm, not sure what to do with an instance of' + argClass}
 
 		return argResults
 
