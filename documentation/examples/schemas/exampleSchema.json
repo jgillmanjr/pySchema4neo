@@ -34,7 +34,7 @@
 					"experience":
 					{
 						"validator": "codeExEnum",
-						"description" "How much experience?"
+						"description": "How much experience?"
 					}
 				}
 			},
@@ -57,6 +57,47 @@
 			"name":
 			{
 				"validator": "string"
+			}
+		}
+	},
+	"Conflictor":
+	{
+		"description": "Used to demonstrate/test conflicting required property validators in multi label nodes",
+		"requiredProperties":
+		{
+			"name":
+			{
+				"validator": "conflict"
+			},
+			"age":
+			{
+				"validator": "conflict",
+				"description": "The persons age"
+			}
+		},
+		"validRelations":
+		{
+			"knows":
+			{
+				"Person":
+				{
+					"length":
+					{
+						"validator": "conflict",
+						"description": "How many years?"
+					}
+				}
+			},
+			"codes_in":
+			{
+				"ProgLanguage":
+				{
+					"experience":
+					{
+						"validator": "conflict",
+						"description": "How much experience?"
+					}
+				}
 			}
 		}
 	},

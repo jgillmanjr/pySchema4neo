@@ -140,17 +140,21 @@ class Schema():
 		nodeProperties = Node.properties
 
 		if not self.anyPropLabels.intersection(nodeLabels): # No point in checking properties if the node has a 'free for all' label assignment
+			propValidator = {} # This will associate a label property with the validator. This will be used to make sure duplicate property names defined for a label don't conflict with others
 			for nodeLabel in nodeLabels:
 				if nodeLabel not in self.schema:
 					return {'success': False, 'err': nodeLabel + ' is not a valid label'}
 				else:
-					requiredProps = self.schema[nodeLabel]['requiredProperties'].keys()
-					for reqProp in requiredProps:
-						if reqProp not in nodeProperties.keys():
+					requiredProps = self.schema[nodeLabel]['requiredProperties']
+					for reqPropKey, reqPropDef in requiredProps.iteritems():
+						if reqPropKey not in nodeProperties.keys():
 							return {'success': False, 'err': 'The required property ' + reqProp + ' is not defined in the node.'}
 						else:
+							if reqPropKey not in propValidator:
+								propValidator[reqPropKey] = reqPropDef['validator']
+							else:
+								if reqPropDef['validator'] != propValidator[reqPropKey]: return {'success': False, 'err': 'Validator conflict for ' + reqPropKey} # Check for the conflict and return if needed
 							pass	# This is where the validator for the required property would be called to make sure the property value was legit. But for now... just go
-									# Should also figure out how I want to handle different labels with same required property but different validators... actually, handle this at schema validation - don't allow it
 		
 		# Check for instantiated relations
 		inRels = []
@@ -202,7 +206,7 @@ class Schema():
 		if nodeChkLoc != 'Start':
 			if not self.checkNode(Rel.start_node, True)['success']:
 				return {'success': False, 'err': 'The starting node failed validation.'}
-		if nodeChkLoc != 'End'
+		if nodeChkLoc != 'End':
 			if not self.checkNode(Rel.end_node, True)['success']:
 				return {'success': False, 'err': 'The ending node failed validation.'}
 
