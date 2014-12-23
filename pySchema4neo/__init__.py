@@ -9,7 +9,7 @@ Author: Jason Gillman Jr.
 import py2neo
 import json
 
-def validateSchema(schema):
+def validateSchema(schema, validator):
 	"""
 	Validate the schema
 
@@ -42,6 +42,8 @@ def validateSchema(schema):
 						raise Exception('No validator or invalid validator value for ' + location)
 					if 'description' in propDef and not isinstance(propDef['description'], basestring):
 						raise Exception('description is not a string at ' + location)
+					if not hasattr(validator, propDef['validator']):
+						raise Exception('Node property validator ' + propDef['validator'] + ' is not defined in the validator module')
 
 		if 'validRelations' in nodeDef:
 			if type(nodeDef['validRelations']) is not dict:
@@ -71,6 +73,8 @@ def validateSchema(schema):
 										raise Exception('No validator or invalid validator value for ' + location)
 									if 'description' in propDef and not isinstance(propDef['description'], basestring):
 										raise Exception('description is not a string at ' + location)
+									if not hasattr(validator, propDef['validator']):
+										raise Exception('Relation property validator ' + propDef['validator'] + ' is not defined in the validator module')
 
 
 class Schema():
@@ -93,22 +97,24 @@ class Schema():
 
 		return argResults
 
-	def __init__(self, schemaPath, validatorPath, graphObj):
+	def __init__(self, schemaPath, validatorModule, graphObj):
 		"""
 		Insantiate a Schema object.
 
 		schemaPath is the path to the JSON file containing your schema
 
-		validatorPath is the path to the script that contains your validators
+		validatorModule is the python module containing your validators
 
 		graphObj is the py2neo Graph object to use
 		"""
+		# Load the validator module
+		self.validator = __import__(validatorModule)
 
 		# Schema setup and validation
 		schemaFile = open(schemaPath)
 		self.schema = json.loads(schemaFile.read())
 		schemaFile.close()
-		validateSchema(self.schema) # Make sure things are on the up and up
+		validateSchema(self.schema, self.validator) # Make sure things are on the up and up
 
 		## Find any labels that don't require any specific properties, as well as labels that handle any outbound relation
 		self.anyPropLabels = set()
@@ -117,10 +123,7 @@ class Schema():
 			if 'requiredProperties' not in definition or len(definition['requiredProperties']) == 0: self.anyPropLabels.add(label)
 			if 'validRelations' not in definition or len(definition['validRelations']) == 0: self.anyRelLabels.add(label)
 
-
 		self.Graph = graphObj
-
-		#validatorFile = open(validatorPath)
 	
 	def checkNode(self, Node, fromRelChk = False):
 		"""
@@ -154,7 +157,10 @@ class Schema():
 								propValidator[reqPropKey] = reqPropDef['validator']
 							else:
 								if reqPropDef['validator'] != propValidator[reqPropKey]: return {'success': False, 'err': 'Validator conflict for node property: ' + reqPropKey} # Check for the conflict and return if needed
-							pass	# This is where the validator for the required property would be called to make sure the property value was legit. But for now... just go
+						
+						validateResult = self.validate(reqPropDef['validator'], nodeProperties[reqPropKey]) # Validate the property
+						if not validateResult['success']:
+							return {'success': False, 'err': reqPropKey + ' failed validation: ' + validateResult['err']}
 		
 		# Check for instantiated relations
 		inRels = []
@@ -249,7 +255,10 @@ class Schema():
 											relPropValidator[tPropKey] = tPropDef['validator']
 										else:
 											if tPropDef['validator'] != relPropValidator[tPropKey]: return {'success': False, 'err': 'Validator conflict for relation property ' + tPropKey} # Check for the conflict
-										pass # This is where the validator will be called to check out the value
+									
+									validateResult = self.validate(tPropDef['validator'], relProperties[tPropKey]) # Validate the property
+									if not validateResult['success']:
+										return {'success': False, 'err': tPropKey + ' failed validation: ' + validateResult['err']}
 
 				#### Check to make sure the target node has at least one label that is a valid target for each of the start nodes labels for a given relation type
 				if startLabel in labelRelTargets:
@@ -264,3 +273,10 @@ class Schema():
 		else:
 			self.Graph.create(Rel) # Create
 		return {'success': True, 'err': None}
+
+	def validate(self, valName, propValue):
+		"""
+		Run the input against the validator specified by valName
+		"""
+
+		return getattr(self.validator, valName)(propValue)
