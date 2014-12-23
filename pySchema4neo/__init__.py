@@ -87,8 +87,8 @@ class Schema():
 
 		Also return a list of the results in the order of the arguments as they were passed in
 		"""
+		argResults = []
 		if args:
-			argResults = []
 			for arg in args:
 				argClass = arg.__class__.__name__
 				if argClass == 'Node': argResults.append(self.checkNode(arg))
