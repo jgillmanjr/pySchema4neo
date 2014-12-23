@@ -221,15 +221,18 @@ class Schema():
 		if self.anyRelLabels.intersection(startLabels):
 			allowedRel = True # Not really needed, but my OCD compels me..
 			freeForAll = True
-#		startNode		= Rel.start_node
-#		startLabels		= startNode.labels
-#		endNode			= Rel.end_node
-#		endLabels		= endNode.labels
-#		relProperties	= Rel.properties
-#		labelRelCovered = False # This will indicate whether the relation type is considered legit from the perspective of the node's label(s)
-#		
-#		if self.anyPropLabels.intersection(startLabels): labelRelCovered = True # Might as well just take care of this now if appropriate...
-#		for startLabel in startLabels:
-#			if Rel.type in self.schema[startLabel]['validRelations']:
-#				labelRelCovered = True
 
+		## If not a free for all, do further checks
+		if not freeForAll:
+
+			### Check to make sure the relation type is valid for the label(s) in the starting node
+			for startLabel in startLabels:
+				if Rel.type in self.schema[startLabel]['validRelations']:
+					allowedRel = True
+
+			if not allowedRel: return {'success': False, 'err': 'The relation type ' + Rel.type + ' is not one allowed by any of the starting node\'s labels'}
+
+			### Check to make sure the required properties are present
+			### Also, just like with node properties, do some validation on the schema to make sure the same properties for different "receiving nodes" for a relation type have the same validator. Remove this when done in schema validation.
+			#### So for example, if Node A -[:`dislikes`]-> Node B, if Node B has the `Person` and `ProgLanguage`labels, and those labels call for the same named property, that property must having the same validator
+			
