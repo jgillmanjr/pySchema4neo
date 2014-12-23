@@ -159,8 +159,11 @@ class Schema():
 			for rel in relGen:
 				ioRels.append(rel)
 		if not fromRelChk and len(ioRels) > 0: # Don't run the reference check if the node check was a result from a reference check or if there are no relations
-			pass
+			for rel in ioRels:
+				if not self.checkRel(rel, True)['success']:
+					return {'success': False, 'err': 'Relation check failed'}
 
+		# Execute node creation or update
 		if Node.bound:
 			Node.push() # Update
 		else:
