@@ -214,9 +214,9 @@ class Schema():
 		
 		## Check the relation type for validity
 		startNode		= Rel.start_node
-		startLabels		= startNode.labels
+		startLabels		= set(startNode.labels)
 		endNode			= Rel.end_node
-		endLabels		= endNode.labels
+		endLabels		= set(endNode.labels)
 		relProperties	= Rel.properties
 		allowedRel = False # This will indicate whether the relation type is considered legit from the perspective of the node's label(s)
 		freeForAll = False # Set if there's a 'free for all' label assigned to the starting node
@@ -228,15 +228,30 @@ class Schema():
 
 		## If not a free for all, do further checks
 		if not freeForAll:
-
-			### Check to make sure the relation type is valid for the label(s) in the starting node
+			### Check to make sure the relation type is valid for the label(s) in the starting node and check against target labels as well as conflict check the properties
+			labelRelTargets = {} # Will store the valid targets of a relation
+			relPropValidator = {} # Will be used for relation property conflict detection
 			for startLabel in startLabels:
 				if Rel.type in self.schema[startLabel]['validRelations']:
 					allowedRel = True
+					if len(self.schema[startLabel]['validRelations'][Rel.type]) > 0: # The start label in question has defined target labels for the relation type
+						labelRelTargets[startLabel] = set()
+						for tgtLbl, tgtDef in self.schema[startLabel]['validRelations'][Rel.type].iteritems():
+							labelRelTargets[startLabel].add(tgtLbl)
+							if len(tgtDef) > 0: # The target definition specifies properties the relation must have
+								for tPropKey, tPropDef in tgtDef.iteritems():
+									if tPropKey not in relProperties.keys():
+										return {'success': False, 'err': 'The required property ' + tPropKey + ' is not defined in the relation.'}
+									else:
+										if tPropKey not in relPropValidator:
+											relPropValidator[tPropKey] = tPropDef['validator']
+										else:
+											if tPropDef['validator'] != relPropValidator[tPropKey]: return {'success': False, 'err': 'Validator conflict for relation property ' + tPropKey} # Check for the conflict
+										pass # This is where the validator will be called to check out the value
 
-			if not allowedRel: return {'success': False, 'err': 'The relation type ' + Rel.type + ' is not one allowed by any of the starting node\'s labels'}
+				#### Check to make sure the target node has at least one label that is a valid target for each of the start nodes labels for a given relation type
+				if startLabel in labelRelTargets:
+					if not labelRelTargets[startLabel] & endLabels:
+						return {'success': False, 'err': 'The target node does not possess at least one of the required labels based on the start node\'s labels and the relation type.'}
 
-			### Check to make sure the required properties are present
-			### Also, just like with node properties, do some validation on the schema to make sure the same properties for different "receiving nodes" for a relation type have the same validator. Remove this when done in schema validation.
-			#### So for example, if Node A -[:`dislikes`]-> Node B, if Node B has the `Person` and `ProgLanguage`labels, and those labels call for the same named property, that property must having the same validator
-			
+			if not allowedRel: return {'success': False, 'err': 'The relation type ' + Rel.type + ' is not one allowed by any of the starting node\'s labels.'}
