@@ -148,12 +148,12 @@ class Schema():
 					requiredProps = self.schema[nodeLabel]['requiredProperties']
 					for reqPropKey, reqPropDef in requiredProps.iteritems():
 						if reqPropKey not in nodeProperties.keys():
-							return {'success': False, 'err': 'The required property ' + reqProp + ' is not defined in the node.'}
+							return {'success': False, 'err': 'The required node property ' + reqProp + ' is not defined in the node.'}
 						else:
 							if reqPropKey not in propValidator:
 								propValidator[reqPropKey] = reqPropDef['validator']
 							else:
-								if reqPropDef['validator'] != propValidator[reqPropKey]: return {'success': False, 'err': 'Validator conflict for ' + reqPropKey} # Check for the conflict and return if needed
+								if reqPropDef['validator'] != propValidator[reqPropKey]: return {'success': False, 'err': 'Validator conflict for node property: ' + reqPropKey} # Check for the conflict and return if needed
 							pass	# This is where the validator for the required property would be called to make sure the property value was legit. But for now... just go
 		
 		# Check for instantiated relations
@@ -204,11 +204,13 @@ class Schema():
 		# Make sure the nodes themselves are legit (without doing relation checks - because that would be recursive and bad, yo)
 		# However, don't check a node if the nodeCheck() method is what's calling this
 		if nodeChkLoc != 'Start':
-			if not self.checkNode(Rel.start_node, True)['success']:
-				return {'success': False, 'err': 'The starting node failed validation.'}
+			ncResult = self.checkNode(Rel.start_node, True)
+			if not ncResult['success']:
+				return {'success': False, 'err': 'The starting node failed validation: ' + ncResult['err']}
 		if nodeChkLoc != 'End':
-			if not self.checkNode(Rel.end_node, True)['success']:
-				return {'success': False, 'err': 'The ending node failed validation.'}
+			ncResult = self.checkNode(Rel.end_node, True)
+			if not ncResult['success']:
+				return {'success': False, 'err': 'The ending node failed validation: ' + ncResult['err']}
 
 		# Now make sure the relation itself is legit
 		
@@ -255,3 +257,4 @@ class Schema():
 						return {'success': False, 'err': 'The target node does not possess at least one of the required labels based on the start node\'s labels and the relation type.'}
 
 			if not allowedRel: return {'success': False, 'err': 'The relation type ' + Rel.type + ' is not one allowed by any of the starting node\'s labels.'}
+
