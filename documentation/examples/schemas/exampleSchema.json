@@ -60,7 +60,7 @@
 			}
 		}
 	},
-	"Conflictor":
+	"NodeConflictor":
 	{
 		"description": "Used to demonstrate/test conflicting required property validators in multi label nodes",
 		"requiredProperties":
@@ -72,6 +72,56 @@
 			"age":
 			{
 				"validator": "conflict",
+				"description": "The persons age"
+			}
+		},
+		"validRelations":
+		{
+			"knows":
+			{
+				"Person":
+				{
+					"length":
+					{
+						"validator": "integer",
+						"description": "How many years?"
+					}
+				}
+			},
+			"codes_in":
+			{
+				"ProgLanguage":
+				{
+					"experience":
+					{
+						"validator": "codeExEnum",
+						"description": "How much experience?"
+					}
+				}
+			},
+			"dislikes":
+			{
+				"Person":
+				{
+				},
+				"ProgLanguage":
+				{
+				}
+			}
+		}
+	},
+	"RelConflictor":
+	{
+		"description": "A node representing a person",
+		"requiredProperties":
+		{
+			"name":
+			{
+				"validator": "string"
+			},
+			"age":
+			{
+				"validator": "integer",
 				"description": "The persons age"
 			}
 		},
@@ -97,6 +147,15 @@
 						"validator": "conflict",
 						"description": "How much experience?"
 					}
+				}
+			},
+			"dislikes":
+			{
+				"Person":
+				{
+				},
+				"ProgLanguage":
+				{
 				}
 			}
 		}
