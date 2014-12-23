@@ -258,3 +258,9 @@ class Schema():
 
 			if not allowedRel: return {'success': False, 'err': 'The relation type ' + Rel.type + ' is not one allowed by any of the starting node\'s labels.'}
 
+		# Execute relation creation or update
+		if Rel.bound:
+			Rel.push() # Update
+		else:
+			self.Graph.create(Rel) # Create
+		return {'success': True, 'err': None}
