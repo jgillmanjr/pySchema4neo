@@ -153,15 +153,24 @@ class Schema():
 									# Should also figure out how I want to handle different labels with same required property but different validators... actually, handle this at schema validation - don't allow it
 		
 		# Check for instantiated relations
-		ioRels = []
+		inRels = []
+		outRels = []
 		if Node.bound: # It will complain if not bound
-			relGen = Node.match()
+			relGen = Node.match_incoming() ## Inbound relations
 			for rel in relGen:
-				ioRels.append(rel)
-		if not fromRelChk and len(ioRels) > 0: # Don't run the reference check if the node check was a result from a reference check or if there are no relations
-			for rel in ioRels:
-				if not self.checkRel(rel, True)['success']:
-					return {'success': False, 'err': 'Relation check failed'}
+				inRels.append(rel)
+			relGen = Node.match_outgoing() ## Outbound relations
+			for rel in relGen:
+				outRels.append(rel)
+
+		# Check said relations if the node check wasn't kicked off by a relation check
+		if not fromRelChk:
+			for rel in inRels:
+				if not self.checkRel(rel, 'End')['success']:
+					return {'success': False, 'err': 'Inbound relation check failed'}
+			for rel in outRels:
+				if not self.checkRel(rel, 'Start')['success']:
+					return {'success': False, 'err': 'Outbound relation check failed'}
 
 		# Execute node creation or update
 		if Node.bound:
@@ -170,13 +179,13 @@ class Schema():
 			self.Graph.create(Node) # Create
 		return {'success': True, 'err': None}
 
-	def checkRel(self, Rel, fromNodeChk):
+	def checkRel(self, Rel, nodeChkLoc = None):
 		"""
 		Checks the validity of the relation.
 
+		This method focuses on checking the relation in general, which includes the nodes.
+		If nodeChkLoc is set (either 'Start' or 'End'), it will skip the check on that particular node since that's where the relation check came from.
 		If it passes, the relation is created or updated.
-
-		fromNodeChk will get passed as true if the relation check is done as a result of a node check
 
 		As for the return value, a dict will be returned in the format of:
 			{
@@ -189,10 +198,13 @@ class Schema():
 			return {'success': False, 'err': 'There are more than two nodes in the Relationship object.'}
 
 		# Make sure the nodes themselves are legit (without doing relation checks - because that would be recursive and bad, yo)
-		if not self.checkNode(Rel.start_node, True)['success']:
-			return {'success': False, 'err': 'The starting node failed validation.'}
-		if not self.checkNode(Rel.end_node, True)['success']:
-			return {'success': False, 'err': 'The ending node failed validation.'}
+		# However, don't check a node if the nodeCheck() method is what's calling this
+		if nodeChkLoc != 'Start':
+			if not self.checkNode(Rel.start_node, True)['success']:
+				return {'success': False, 'err': 'The starting node failed validation.'}
+		if nodeChkLoc != 'End'
+			if not self.checkNode(Rel.end_node, True)['success']:
+				return {'success': False, 'err': 'The ending node failed validation.'}
 
 		# Now make sure the relation itself is legit
 		
