@@ -277,6 +277,10 @@ class Schema():
 	def validate(self, valName, propValue):
 		"""
 		Run the input against the validator specified by valName
+
+		valName is the name of the validator
+
+		propValue is the data to be evaluated
 		"""
 
 		return getattr(self.validator, valName)(propValue)
