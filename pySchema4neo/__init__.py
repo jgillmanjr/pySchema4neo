@@ -116,13 +116,6 @@ class Schema():
 		schemaFile.close()
 		validateSchema(self.schema, self.validator) # Make sure things are on the up and up
 
-		## Find any labels that don't require any specific properties, as well as labels that handle any outbound relation
-		self.anyPropLabels = set()
-		self.anyRelLabels = set()
-		for label, definition in self.schema.iteritems():
-			if 'requiredProperties' not in definition or len(definition['requiredProperties']) == 0: self.anyPropLabels.add(label)
-			if 'validRelations' not in definition or len(definition['validRelations']) == 0: self.anyRelLabels.add(label)
-
 		self.Graph = graphObj
 	
 	def checkNode(self, Node, fromRelChk = False):
@@ -142,12 +135,12 @@ class Schema():
 		nodeLabels = Node.labels
 		nodeProperties = Node.properties
 
-		if not self.anyPropLabels.intersection(nodeLabels): # No point in checking properties if the node has a 'free for all' label assignment
-			propValidator = {} # This will associate a label property with the validator. This will be used to make sure duplicate property names defined for a label don't conflict with others
-			for nodeLabel in nodeLabels:
-				if nodeLabel not in self.schema:
-					return {'success': False, 'err': nodeLabel + ' is not a valid label'}
-				else:
+		propValidator = {} # This will associate a label property with the validator. This will be used to make sure duplicate property names defined for a label don't conflict with others
+		for nodeLabel in nodeLabels:
+			if nodeLabel not in self.schema:
+				return {'success': False, 'err': nodeLabel + ' is not a valid label'}
+			else:
+				if 'requiredProperties' in self.schema[nodeLabel] and len(self.schema[nodeLabel]['requiredProperties']) > 0:
 					requiredProps = self.schema[nodeLabel]['requiredProperties']
 					for reqPropKey, reqPropDef in requiredProps.iteritems():
 						if reqPropKey not in nodeProperties.keys():
