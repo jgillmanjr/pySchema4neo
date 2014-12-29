@@ -116,13 +116,6 @@ class Schema():
 		schemaFile.close()
 		validateSchema(self.schema, self.validator) # Make sure things are on the up and up
 
-		## Find any labels that don't require any specific properties, as well as labels that handle any outbound relation
-		self.anyPropLabels = set()
-		self.anyRelLabels = set()
-		for label, definition in self.schema.iteritems():
-			if 'requiredProperties' not in definition or len(definition['requiredProperties']) == 0: self.anyPropLabels.add(label)
-			if 'validRelations' not in definition or len(definition['validRelations']) == 0: self.anyRelLabels.add(label)
-
 		self.Graph = graphObj
 	
 	def checkNode(self, Node, fromRelChk = False):
@@ -142,12 +135,12 @@ class Schema():
 		nodeLabels = Node.labels
 		nodeProperties = Node.properties
 
-		if not self.anyPropLabels.intersection(nodeLabels): # No point in checking properties if the node has a 'free for all' label assignment
-			propValidator = {} # This will associate a label property with the validator. This will be used to make sure duplicate property names defined for a label don't conflict with others
-			for nodeLabel in nodeLabels:
-				if nodeLabel not in self.schema:
-					return {'success': False, 'err': nodeLabel + ' is not a valid label'}
-				else:
+		propValidator = {} # This will associate a label property with the validator. This will be used to make sure duplicate property names defined for a label don't conflict with others
+		for nodeLabel in nodeLabels:
+			if nodeLabel not in self.schema:
+				return {'success': False, 'err': nodeLabel + ' is not a valid label'}
+			else:
+				if 'requiredProperties' in self.schema[nodeLabel] and len(self.schema[nodeLabel]['requiredProperties']) > 0:
 					requiredProps = self.schema[nodeLabel]['requiredProperties']
 					for reqPropKey, reqPropDef in requiredProps.iteritems():
 						if reqPropKey not in nodeProperties.keys():
@@ -222,50 +215,62 @@ class Schema():
 		
 		## Check the relation type for validity
 		startNode		= Rel.start_node
-		startLabels		= set(startNode.labels)
+		startLabels		= startNode.labels
 		endNode			= Rel.end_node
-		endLabels		= set(endNode.labels)
+		endLabels		= endNode.labels
 		relProperties	= Rel.properties
-		allowedRel = False # This will indicate whether the relation type is considered legit from the perspective of the node's label(s)
-		freeForAll = False # Set if there's a 'free for all' label assigned to the starting node
-		
-		## 'Free for all' check
-		if self.anyRelLabels.intersection(startLabels):
-			allowedRel = True # Not really needed, but my OCD compels me..
-			freeForAll = True
+		allowedRels		= set([]) # This will ultimately hold the valid relations (if any)
+		allowedTgts		= set([]) # Just a list for comparison of valid targets
+		validTgtProps	= {} # This will hold the valid targets (if any) for the relation in use, as well as the properties required
+		conflictTgts	= set([]) # If initial confliction check notices that property validators collide for a target, that target gets added here
+		requiredProps	= {} # The final required property list will go here
+		joiner			= ', ' # Used for displaying lists/sets in error messages
 
-		## If not a free for all, do further checks
-		if not freeForAll:
-			### Check to make sure the relation type is valid for the label(s) in the starting node and check against target labels as well as conflict check the properties
-			labelRelTargets = {} # Will store the valid targets of a relation
-			relPropValidator = {} # Will be used for relation property conflict detection
-			for startLabel in startLabels:
+		### Distill valid relation types - in the event there are multiple labels assigned to a node that have specified valid relations, union the allowed relations.
+		for startLabel in startLabels:
+			if 'validRelations' in self.schema[startLabel] and len(self.schema[startLabel]['validRelations']) > 0: # Get the valid relations... if we have them
+				allowedRels |= set(self.schema[startLabel]['validRelations'].keys())
+
+				#### Get any targets while we're at it and do initial confliction checks
 				if Rel.type in self.schema[startLabel]['validRelations']:
-					allowedRel = True
-					if len(self.schema[startLabel]['validRelations'][Rel.type]) > 0: # The start label in question has defined target labels for the relation type
-						labelRelTargets[startLabel] = set()
-						for tgtLbl, tgtDef in self.schema[startLabel]['validRelations'][Rel.type].iteritems():
-							labelRelTargets[startLabel].add(tgtLbl)
-							if len(tgtDef) > 0: # The target definition specifies properties the relation must have
-								for tPropKey, tPropDef in tgtDef.iteritems():
-									if tPropKey not in relProperties.keys():
-										return {'success': False, 'err': 'The required property ' + tPropKey + ' is not defined in the relation.'}
-									else:
-										if tPropKey not in relPropValidator:
-											relPropValidator[tPropKey] = tPropDef['validator']
-										else:
-											if tPropDef['validator'] != relPropValidator[tPropKey]: return {'success': False, 'err': 'Validator conflict for relation property ' + tPropKey} # Check for the conflict
-									
-									validateResult = self.validate(tPropDef['validator'], relProperties[tPropKey]) # Validate the property
-									if not validateResult['success']:
-										return {'success': False, 'err': tPropKey + ' failed validation: ' + validateResult['err']}
+					for tgtLbl, tgtDef in self.schema[startLabel]['validRelations'][Rel.type].iteritems():
+						allowedTgts.add(tgtLbl)
+						if tgtLbl not in validTgtProps:
+							validTgtProps[tgtLbl] = {}
+						for tPropKey, tPropDef in tgtDef.iteritems(): # Run an initial deconfliction for any properties defined
+							if tPropKey not in validTgtProps[tgtLbl]:
+								validTgtProps[tgtLbl][tPropKey] = tPropDef['validator']
+							else:
+								if tPropDef['validator'] != validTgtProps[tgtLbl][tPropKey]:
+									conflictTgts.add(tgtLbl) # We have a conflict, so add this target to the conflicted set
 
-				#### Check to make sure the target node has at least one label that is a valid target for each of the start nodes labels for a given relation type
-				if startLabel in labelRelTargets:
-					if not labelRelTargets[startLabel] & endLabels:
-						return {'success': False, 'err': 'The target node does not possess at least one of the required labels based on the start node\'s labels and the relation type.'}
 
-			if not allowedRel: return {'success': False, 'err': 'The relation type ' + Rel.type + ' is not one allowed by any of the starting node\'s labels.'}
+		### Check to make sure the relation type is valid for the label(s) in the starting node if len(allowedRels) > 0 (otherwise, it's a free for all)
+		if len(allowedRels) > 0 and Rel.type not in allowedRels:
+			return {'success': False, 'err': 'Allowed relation types are [' + joiner.join(allowedRels) + '] but ' + Rel.type + ' is not one of them.'}
+
+		### Check targets
+		if endLabels & conflictTgts:
+			return {'success': False, 'err': 'The target node has label(s) which fall into a conflicted set of [' + joiner.join(conflictTgts) + ']'}
+		if not endLabels & allowedTgts:
+			return {'success': False, 'err': 'The target node has no label(s) that fall into the allowed list of [' + joiner.join(allowedTgts) + ']'}
+		
+		### Make sure we have all required properties and do a final conflict check
+		for endLabel in endLabels:
+			for propLabel, propDef in validTgtProps[endLabel].iteritems():
+				if propLabel not in requiredProps:
+					requiredProps[propLabel] = propDef
+				else: # Conflict check
+					if propDef != requiredProps[propLabel]:
+						return {'success': False, 'err': 'Required property ' + propLabel + ' has a validator conflict'}
+		for prop in requiredProps.keys():
+			if prop not in relProperties:
+				return {'success': False, 'err': 'Required property ' + prop + ' is not specified in the relation.'}
+			else: # Run the validation
+				valResult = self.validate(valName = requiredProps[prop], propValue = relProperties[prop])
+				if not valResult['success']:
+					return {'success': False, 'err': 'The required property ' + prop + ' did not pass validation: ' + valResult['err']}
+
 
 		# Execute relation creation or update
 		if Rel.bound:
