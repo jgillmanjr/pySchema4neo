@@ -4,7 +4,7 @@ pySchema4neo
 A proof of concept designed for use with Nigel Small's [py2neo](https://github.com/nigelsmall/py2neo) library to allow for the use of schema constraints and property validation.
 
 # Installing pySchema4neo
-At this time, it's basically download and include the the path. I should be getting this on the python package index at some point so you can just `pip install` it.
+Either download and include in your path, or `pip install pySchema4neo`
 
 # Using pySchema4neo
 ## The Schema File
