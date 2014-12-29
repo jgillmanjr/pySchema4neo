@@ -253,7 +253,7 @@ class Schema():
 		if endLabels & conflictTgts:
 			return {'success': False, 'err': 'The target node has label(s) which fall into a conflicted set of [' + joiner.join(conflictTgts) + ']'}
 		if not endLabels & allowedTgts:
-			return {'success': False, 'err': 'The target node has no label(s) that fall into the allowed list of [' + joiner.join(allowedTgts)}
+			return {'success': False, 'err': 'The target node has no label(s) that fall into the allowed list of [' + joiner.join(allowedTgts) + ']'}
 		
 		### Make sure we have all required properties and do a final conflict check
 		for endLabel in endLabels:
@@ -266,6 +266,11 @@ class Schema():
 		for prop in requiredProps.keys():
 			if prop not in relProperties:
 				return {'success': False, 'err': 'Required property ' + prop + ' is not specified in the relation.'}
+			else: # Run the validation
+				valResult = self.validate(valName = requiredProps[prop], propValue = relProperties[prop])
+				if not valResult['success']:
+					return {'success': False, 'err': 'The required property ' + prop + ' did not pass validation: ' + valResult['err']}
+
 
 		# Execute relation creation or update
 		if Rel.bound:
