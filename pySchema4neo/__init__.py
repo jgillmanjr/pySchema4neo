@@ -144,7 +144,7 @@ class Schema():
 					requiredProps = self.schema[nodeLabel]['requiredProperties']
 					for reqPropKey, reqPropDef in requiredProps.iteritems():
 						if reqPropKey not in nodeProperties.keys():
-							return {'success': False, 'err': 'The required node property ' + reqProp + ' is not defined in the node.'}
+							return {'success': False, 'err': 'The required node property ' + reqPropKey + ' is not defined in the node.'}
 						else:
 							if reqPropKey not in propValidator:
 								propValidator[reqPropKey] = reqPropDef['validator']
