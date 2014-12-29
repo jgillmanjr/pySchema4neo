@@ -25,11 +25,11 @@ The schema file is a JSON file that does what you think it does. In it you will 
 See the `schemaModel.txt` file in the `documentation` directory to get a look at the format.
 
 ### Important Notes About Schema Definitions
-1. When multiple types are assigned to a node, if **ANY** of those types don't define any required properties, it will eliminate **ALL** property requirements that other types might declare.
-1. The above caveat also applies to outbound relations. If an applied node type doesn't specify what is allowed, it will override relation restrictions specified by other types.
-1. Aaaand again for a lack of defined target types for a given relation.
-1. And once more for a target that doesn't have any specified required properties.
-1. Specified validators must exist (see below for information on validators)
+While this proof of concept was designed with only a single label being assigned to a node, an attempt has been made to handle multiple label assignements *somewhat* intelligently.
+
+1. When multiple labels are assigned to a node, the property requirements for **ALL** of the assigned labels must be met. If one of the labels doesn't define required properties, you'll still need to have required properties for any other labels set.
+1. Any outbound relation type is allowed as long as it exists within the spec for any of the assigned labels. If a label doesn't restrict outbound relation types, you're still limited to a union of the allowed types specified by the other labels.
+1. If there is a validator conflict for a node or relation property, the node or relation create/update will fail (and you'll be notified what went wrong).
 
 ### Using the Schema File
 When you construct the pySchema4neo.Schema object, pass in the path to the file.
@@ -98,9 +98,13 @@ You can also pass in an arbitrary list of node and relationship objects:
 mySchema(node3, rel)
 ```
 
+See the examples in the `documentation/examples/` directory.
+
 ### Checking Success (or Failure) of the Operation
 Calling the schema object will return a list of statuses like `{'success': True, 'err': None}` or `{'success': False, 'err': 'Enter your informational message here'}` based on each object you pass in (and will return `None` if nothing is passed in) that you can use to verify the success of your operations.
 
 
 # What Now?
 **Go forth and do awesome things (and submit issues as you see them)!**
+
+Also, please send me your feedback about the process of 'schemaizing' neo4j
