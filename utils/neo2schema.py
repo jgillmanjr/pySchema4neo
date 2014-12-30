@@ -12,11 +12,21 @@ host and port should be self explanitory
 import py2neo
 import json
 
-describeLabel	= 'domainDescribe'
-schemaName		= 'yourSchema'
+describeLabel = raw_input('Label to use [domainDescribe]: ')
+if not describeLabel:
+	describeLabel = 'domainDescribe'
 
-host		= 'http://your.domain.com'
-port		= '7474'
+schemaName = raw_input('Schema file name (omit extension) [yourSchema]: ')
+if not schemaName:
+	schemaName = 'networkingSchema'
+
+host = raw_input('Host to use [http://localhost]: ')
+if not host:
+	host = 'http://localhost'
+
+port = raw_input('Port to use [7474]: ')
+if not port:
+	port = '9494'
 
 dbString	= host + ':' + port + '/db/data/'
 
@@ -31,8 +41,11 @@ for node in domNodes:
 	if node['name'] not in validLabels:
 		validLabels[node['name']] = {'validRelations': {}, 'requiredProperties': {}}
 		if 'properties' in node: # Get the required properties for a node label
+			print "\tProperties"
 			for prop in node['properties']:
+				print "\t  =>" + prop
 				validLabels[node['name']]['requiredProperties'][prop] = {'validator': '', 'description': ''}
+			print ""
 	for rel in node.match_outgoing():
 		print "\t-[:" + rel.type + "]->" + str(rel.end_node['name'])
 		if rel.type not in validLabels[node['name']]['validRelations']:
@@ -40,8 +53,10 @@ for node in domNodes:
 		validLabels[node['name']]['validRelations'][rel.type][rel.end_node['name']] = {}
 		if 'properties' in rel: # Get the required properties for the relation->target
 			for prop in rel['properties']:
+				print "\t--  " + prop
 				validLabels[node['name']]['validRelations'][rel.type][rel.end_node['name']][prop] = {'validator': '', 'description': ''}
-		
+	
+	print ""	
 
 jsonString = json.dumps(validLabels, sort_keys=True, indent = 4, separators=(',', ': '))
 
