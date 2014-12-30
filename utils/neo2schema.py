@@ -18,7 +18,7 @@ if not describeLabel:
 
 schemaName = raw_input('Schema file name (omit extension) [yourSchema]: ')
 if not schemaName:
-	schemaName = 'networkingSchema'
+	schemaName = 'yourSchema'
 
 host = raw_input('Host to use [http://localhost]: ')
 if not host:
